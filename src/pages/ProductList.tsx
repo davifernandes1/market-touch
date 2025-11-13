@@ -1,13 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, ShoppingCart, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { products, categories } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { ProductModal } from "@/components/ProductModal";
 import { MiniCart } from "@/components/MiniCart";
+import { useIdleTimer } from "@/hooks/useIdleTimer";
+import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/product";
+
+interface Category {
+  id: string;
+  name: string;
+  image_url: string;
+}
+
+interface DbProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  category_id: string;
+}
 
 const ProductList = () => {
   const { categoryId } = useParams();
@@ -15,9 +31,62 @@ const ProductList = () => {
   const { addToCart, total } = useCart();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showMiniCart, setShowMiniCart] = useState(false);
+  const [category, setCategory] = useState<Category | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  useIdleTimer();
 
-  const category = categories.find((c) => c.id === categoryId);
-  const filteredProducts = products.filter((p) => p.category === categoryId);
+  useEffect(() => {
+    loadCategories();
+    loadCategory();
+    loadProducts();
+  }, [categoryId]);
+
+  const loadCategories = async () => {
+    const { data } = await supabase
+      .from("categories")
+      .select("*")
+      .order("display_order", { ascending: true });
+
+    if (data) {
+      setCategories(data);
+    }
+  };
+
+  const loadCategory = async () => {
+    if (!categoryId) return;
+
+    const { data } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("id", categoryId)
+      .maybeSingle();
+
+    if (data) {
+      setCategory(data);
+    }
+  };
+
+  const loadProducts = async () => {
+    if (!categoryId) return;
+
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .eq("category_id", categoryId);
+
+    if (data) {
+      const mappedProducts: Product[] = data.map((p: DbProduct) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image: p.image_url,
+        category: p.category_id,
+      }));
+      setProducts(mappedProducts);
+    }
+  };
 
   const handleAddToCart = (product: Product) => {
     addToCart(product, 1);
@@ -45,10 +114,30 @@ const ProductList = () => {
         </div>
       </header>
 
-      {/* Products Grid */}
-      <div className="container mx-auto px-8 py-8 pb-32">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {filteredProducts.map((product) => (
+      <div className="flex">
+        {/* Sidebar de Categorias */}
+        <aside className="w-64 bg-card border-r border-border min-h-[calc(100vh-5rem)] sticky top-20 hidden lg:block">
+          <div className="p-4">
+            <h2 className="text-lg font-bold mb-4">Categorias</h2>
+            <div className="space-y-2">
+              {categories.map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={cat.id === categoryId ? "default" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => navigate(`/products/${cat.id}`)}
+                >
+                  {cat.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* Products Grid */}
+        <div className="flex-1 px-8 py-8 pb-32">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {products.map((product) => (
             <Card
               key={product.id}
               className="group overflow-hidden border-2 hover:border-primary hover:shadow-smooth transition-all duration-300"
@@ -83,7 +172,8 @@ const ProductList = () => {
                 </Button>
               </div>
             </Card>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

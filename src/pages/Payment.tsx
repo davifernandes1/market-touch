@@ -4,12 +4,14 @@ import { ChevronLeft, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCart } from "@/context/CartContext";
+import { useIdleTimer } from "@/hooks/useIdleTimer";
 
 const Payment = () => {
   const navigate = useNavigate();
   const { cart, total, clearCart } = useCart();
   const [copied, setCopied] = useState(false);
   const [processing, setProcessing] = useState(false);
+  useIdleTimer();
 
   // Simula confirmação de pagamento após 8 segundos
   useEffect(() => {
