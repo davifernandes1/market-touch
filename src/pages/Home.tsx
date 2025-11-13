@@ -1,17 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { categories } from "@/data/products";
 import { useCart } from "@/context/CartContext";
+import { useIdleTimer } from "@/hooks/useIdleTimer";
+import { supabase } from "@/integrations/supabase/client";
 import heroStore from "@/assets/hero-store.jpg";
 import { MiniCart } from "@/components/MiniCart";
+
+interface Category {
+  id: string;
+  name: string;
+  image_url: string;
+  display_order: number;
+}
 
 const Home = () => {
   const navigate = useNavigate();
   const { total } = useCart();
   const [showMiniCart, setShowMiniCart] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  useIdleTimer();
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("display_order", { ascending: true });
+
+    if (data) {
+      setCategories(data);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background animate-fade-in">
@@ -65,7 +90,7 @@ const Home = () => {
             >
               <div className="relative h-64 overflow-hidden">
                 <img
-                  src={category.image}
+                  src={category.image_url}
                   alt={category.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />

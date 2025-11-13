@@ -3,10 +3,12 @@ import { ChevronLeft, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCart } from "@/context/CartContext";
+import { useIdleTimer } from "@/hooks/useIdleTimer";
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cart, updateQuantity, removeFromCart, total } = useCart();
+  useIdleTimer();
 
   if (cart.length === 0) {
     return (
